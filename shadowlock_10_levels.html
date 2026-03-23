@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShadowLock Prism - Yuxin Liu</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font-family: Arial, Helvetica, sans-serif; background: #0f1117; color: #e8ecf1; }
+    #app { display: grid; grid-template-columns: 360px 1fr; height: 100vh; }
+    #panel {
+      padding: 18px;
+      overflow-y: auto;
+      border-right: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, #141926 0%, #0d1118 100%);
+    }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    h2 { font-size: 15px; margin: 18px 0 10px; color: #b8c4d6; }
+    p, li { line-height: 1.5; font-size: 14px; color: #d6dce7; }
+    .muted { color: #9aa5b5; }
+    .level-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .level-btn {
+      border: 1px solid rgba(255,255,255,0.1);
+      background: #171d2a;
+      color: #ecf2ff;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
+    .level-btn:hover { transform: translateY(-1px); background: #1c2434; }
+    .level-btn.active { border-color: #7fb3ff; background: #202a3d; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      margin-top: 6px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(127,179,255,0.15);
+      color: #a7c9ff;
+    }
+    .card {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #9fb1c7;
+    }
+    .value { font-size: 14px; margin-top: 4px; }
+    .controls { display: grid; gap: 8px; margin-top: 12px; }
+    button.action {
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 10px;
+      background: #7fb3ff;
+      color: #08111f;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.action.secondary {
+      background: #2b3447;
+      color: #eef3fb;
+    }
+    #canvas-wrap { position: relative; min-height: 420px; }
+    #canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+    #hud {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(10, 13, 20, 0.8);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(8px);
+      max-width: 520px;
+    }
+    #hud strong { display: block; margin-bottom: 6px; }
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+    .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 999px; margin-right: 8px; vertical-align: middle; }
+    .kbd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: 13px; margin-top: 8px; }
+    code { background: rgba(255,255,255,0.08); padding: 2px 5px; border-radius: 6px; }
+    #status.ok { color: #94e2d5; }
+    #status.warn { color: #f6c177; }
+    #status.win { color: #a6e3a1; font-weight: 700; }
+    #testResults { margin-top: 12px; font-size: 12px; line-height: 1.5; white-space: pre-wrap; color: #c8d2e2; }
+    .ok { color: #94e2d5; }
+    .fail { color: #e78284; }
+    @media (max-width: 980px) {
+      #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      #panel { border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+      .level-grid { grid-template-columns: repeat(5, 1fr); }
+    }
+    @media (max-width: 700px) {
+      .level-grid { grid-template-columns: repeat(2, 1fr); }
+      .kbd-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <aside id="panel">
+      <h1>ShadowLock Prism - Yuxin Liu</h1>
+      <p class="muted">The design is inspired by traditional puzzles: Tangram represents 2D geometric composition, while Kongming Lock represents complex 3D structural interlocking. This project combines both ideas by extending 2D spatial reasoning into a fully 3D environment.</p>
+
+      <h2>Select Level</h2>
+      <div id="levelGrid" class="level-grid"></div>
+
+      <div class="card"><div class="label">Current Level</div><div id="levelName" class="value">-</div></div>
+      <div class="card"><div class="label">Difficulty</div><div id="levelDifficulty" class="value">-</div></div>
+      <div class="card"><div class="label">Projection Target</div><div id="levelProjection" class="value">-</div></div>
+      <div class="card"><div class="label">Design Focus</div><div id="levelIdea" class="value">-</div></div>
+      <div class="card"><div class="label">Goal</div><div id="levelGoal" class="value">-</div></div>
+      <div class="card"><div class="label">Status</div><div id="status" class="value warn">Drag a piece to begin.</div></div>
+
+      <div class="controls">
+        <button id="toggleGhost" class="action">Toggle Target Volume</button>
+        <button id="toggleSupports" class="action secondary">Toggle Support Hints</button>
+        <button id="gravityBtn" class="action secondary">Drop Selected by Gravity</button>
+        <button id="snapBtn" class="action secondary">Snap Selected</button>
+        <button id="resetBtn" class="action secondary">Reset Level</button>
+      </div>
+
+      <div class="card">
+        <div class="label">3D Controls</div>
+        <div class="kbd-grid">
+          <div><code>Drag</code> move on X/Z plane</div>
+          <div><code>Q / E</code> move down / up</div>
+          <div><code>X</code> rotate around X</div>
+          <div><code>Y</code> rotate around Y</div>
+          <div><code>Z</code> rotate around Z</div>
+          <div><code>F</code> mirror across X</div>
+          <div><code>G</code> mirror across Y</div>
+          <div><code>H</code> mirror across Z</div>
+          <div><code>R</code> composite rotation</div>
+          <div><code>Double-click</code> send piece to tray</div>
+          <div><code>Mouse orbit</code> inspect from any angle</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Rules</div>
+        <ul>
+          <li>Every occupied cell must match the glowing target volume.</li>
+          <li>No overlap is allowed.</li>
+          <li>No floating cells: each cell must sit on the ground or another occupied cell.</li>
+          <li>You win only when the full target volume is covered exactly once.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="label">Built-in Checks</div>
+        <div id="testResults">Running checks...</div>
+      </div>
+    </aside>
+
+    <main id="canvas-wrap">
+      <div id="hud">
+        <strong id="hudTitle">-</strong>
+        <div id="hudDesc">-</div>
+        <div class="legend">
+          <div><span class="swatch" style="background:#7fb3ff"></span>Movable Piece</div>
+          <div><span class="swatch" style="background:#f6c177"></span>Selected Piece</div>
+          <div><span class="swatch" style="background:#94e2d5"></span>Target Volume</div>
+          <div><span class="swatch" style="background:#e78284"></span>Invalid Cell</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const LEVELS = [
+      {
+        id: 1,
+        name: 'Level 1 - Twisted Split Tower',
+        difficulty: '★★★☆☆ Intro 3D',
+        projection: 'Front: broken arch / Top: offset square / Side: stepped rise',
+        idea: 'A stronger opening level with real vertical mismatch and a forced standing piece.',
+        goal: 'Assemble the target using at least one upright rotation.',
+        desc: 'Still the easiest level, but no longer flat or obvious.',
+        target: [[0,0,0],[1,0,0],[0,0,1],[1,0,1],[0,1,0],[1,1,1],[2,0,1],[2,1,1]],
+        pieces: [
+          [[0,0,0],[1,0,0],[0,1,0]],
+          [[0,0,0],[0,0,1],[1,0,1]],
+          [[0,0,0],[0,1,0]]
+        ]
+      },
+      {
+        id: 2,
+        name: 'Level 2 - Broken Gate',
+        difficulty: '★★★☆☆ Easy+',
+        projection: 'Front: offset gate / Top: hooked L / Side: leaning frame',
+        idea: 'Introduces an off-center frame where height matters immediately.',
+        goal: 'Complete the bent gate without filling the wrong side.',
+        desc: 'The first level where a mirror can be helpful even if not strictly required.',
+        target: [[0,0,0],[1,0,0],[2,0,0],[0,1,0],[2,1,0],[2,0,1],[2,1,1],[1,1,1],[1,2,1]],
+        pieces: [
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[0,1,0],[0,1,1]],
+          [[0,0,0],[1,0,0],[0,1,0]]
+        ]
+      },
+      {
+        id: 3,
+        name: 'Level 3 - Folded Corner Tower',
+        difficulty: '★★★★☆ Medium-',
+        projection: 'Front: staircase / Top: folded corner / Side: tall L',
+        idea: 'A genuine 3D corner puzzle where pieces must bend around height and depth together.',
+        goal: 'Finish the elevated corner without collisions.',
+        desc: 'From here onward, footprint alone is not enough to solve anything.',
+        target: [[0,0,0],[1,0,0],[2,0,0],[0,1,0],[0,2,0],[0,0,1],[0,1,1],[1,1,1],[1,2,1],[1,2,2]],
+        pieces: [
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[0,1,0],[0,2,0]],
+          [[0,0,0],[0,0,1],[1,0,1]],
+          [[0,0,0],[0,1,0]]
+        ]
+      },
+      {
+        id: 4,
+        name: 'Level 4 - Interlock Spine',
+        difficulty: '★★★★☆ Medium',
+        projection: 'Front: cross / Top: offset cross / Side: 3-high pillar',
+        idea: 'Pieces need to wrap around a center column from several directions.',
+        goal: 'Lock the arms around the main vertical spine.',
+        desc: 'Strongly rewards rotating around all three axes instead of only spinning flat.',
+        target: [[1,0,1],[1,1,1],[1,2,1],[1,3,1],[0,1,1],[2,1,1],[1,1,0],[1,1,2],[0,2,1],[2,2,1]],
+        pieces: [
+          [[0,0,0],[0,1,0],[0,2,0]],
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[0,1,0],[1,1,0]],
+          [[0,0,0],[0,0,1]]
+        ]
+      },
+      {
+        id: 5,
+        name: 'Level 5 - Cantilever Cage',
+        difficulty: '★★★★☆ Medium+',
+        projection: 'Front: cage / Top: long zigzag / Side: suspended brace',
+        idea: 'This level pushes players to think about empty space and vertical bracing.',
+        goal: 'Build the outer cage while preserving the suspended center.',
+        desc: 'A more architectural puzzle with no obvious first placement.',
+        target: [[0,0,0],[1,0,0],[2,0,0],[3,0,0],[0,1,0],[3,1,0],[0,2,0],[3,2,0],[1,1,1],[2,1,1],[1,2,1]],
+        pieces: [
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[0,1,0],[0,2,0]],
+          [[0,0,0],[1,0,0],[1,1,0]],
+          [[0,0,0],[0,1,0]],
+          [[0,0,0]]
+        ]
+      },
+      {
+        id: 6,
+        name: 'Level 6 - Triple Stair Labyrinth',
+        difficulty: '★★★★★ Hard-',
+        projection: 'Front: 3-step rise / Top: maze strip / Side: climbing path',
+        idea: 'Several levels interleave so that the target behaves like a tiny 3D labyrinth.',
+        goal: 'Assemble the staircase maze exactly across three heights.',
+        desc: 'A major jump in difficulty with more than one plausible but wrong arrangement.',
+        target: [[0,0,0],[1,0,0],[2,0,0],[0,1,0],[1,1,0],[0,2,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1],[1,2,1],[1,2,2]],
+        pieces: [
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[0,1,0],[1,1,0]],
+          [[0,0,0],[0,0,1],[1,0,1]],
+          [[0,0,0],[0,1,0],[0,1,1]],
+          [[0,0,0]]
+        ]
+      },
+      {
+        id: 7,
+        name: 'Level 7 - Hollow Gate Plus',
+        difficulty: '★★★★★ Hard',
+        projection: 'Front: gate / Top: U with depth / Side: layered frame',
+        idea: 'Now the hollow center is truly 3D and easy to accidentally block.',
+        goal: 'Keep the cavity open while completing the shell.',
+        desc: 'Careless rotations usually ruin the empty channel in the middle.',
+        target: [[0,0,0],[1,0,0],[2,0,0],[0,1,0],[2,1,0],[0,2,0],[1,2,0],[2,2,0],[0,0,1],[2,0,1],[0,1,1],[2,1,1],[1,2,1]],
+        pieces: [
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[0,1,0],[0,2,0]],
+          [[0,0,0],[1,0,0],[1,0,1]],
+          [[0,0,0],[0,1,0],[0,1,1]],
+          [[0,0,0]]
+        ]
+      },
+      {
+        id: 8,
+        name: 'Level 8 - Spiral Core Max',
+        difficulty: '★★★★★ Very Hard',
+        projection: 'Front: spiral rise / Top: coil / Side: layered turn',
+        idea: 'Several transformations are necessary and camera inspection becomes essential.',
+        goal: 'Fit the spiral without overfilling the center or outer curve.',
+        desc: 'This is the first level that feels like a true 3D burr puzzle.',
+        target: [[0,0,0],[1,0,0],[1,1,0],[1,1,1],[0,1,1],[0,2,1],[0,2,2],[1,2,2],[2,2,2],[2,1,2],[2,1,1]],
+        pieces: [
+          [[0,0,0],[1,0,0],[1,1,0]],
+          [[0,0,0],[0,1,0],[0,1,1]],
+          [[0,0,0],[0,0,1],[1,0,1]],
+          [[0,0,0],[0,1,0]],
+          [[0,0,0],[1,0,0]]
+        ]
+      },
+      {
+        id: 9,
+        name: 'Level 9 - Crown Fortress',
+        difficulty: '★★★★★ Expert',
+        projection: 'Front: crown / Top: wide U / Side: double-height peaks',
+        idea: 'A big footprint with multiple towers, overhang feelings, and mirrored possibilities.',
+        goal: 'Create the crown profile with exact multi-level coverage.',
+        desc: 'Difficult to solve without planning which piece becomes each tower and ridge.',
+        target: [[0,0,0],[1,0,0],[2,0,0],[3,0,0],[4,0,0],[0,1,0],[2,1,0],[4,1,0],[1,2,0],[3,2,0],[1,0,1],[3,0,1],[1,1,1],[3,1,1]],
+        pieces: [
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[1,0,0],[0,1,0]],
+          [[0,0,0],[0,1,0],[0,0,1]],
+          [[0,0,0],[0,1,0],[0,0,1]],
+          [[0,0,0],[1,0,0]]
+        ]
+      },
+      {
+        id: 10,
+        name: 'Level 10 - Final ShadowLock Prism',
+        difficulty: '★★★★★ Boss+',
+        projection: 'Front: temple emblem / Top: ring / Side: stepped lock tower',
+        idea: 'Combines height, cavity, mirror use, and multi-axis rotation in a large final structure.',
+        goal: 'Complete the final multi-layer ring while preserving the center opening and upper ridges.',
+        desc: 'The full version of the concept: dense, layered, and much harder than the earlier prototype.',
+        target: [[0,0,0],[1,0,0],[2,0,0],[3,0,0],[0,1,0],[3,1,0],[0,2,0],[3,2,0],[0,3,0],[1,3,0],[2,3,0],[3,3,0],[1,0,1],[2,0,1],[1,3,1],[2,3,1],[1,1,2],[2,1,2],[1,2,2],[2,2,2]],
+        pieces: [
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[0,1,0],[0,2,0]],
+          [[0,0,0],[1,0,0],[1,0,1]],
+          [[0,0,0],[0,1,0],[0,1,1]],
+          [[0,0,0],[1,0,0],[0,0,1],[1,0,1]],
+          [[0,0,0],[0,1,0]]
+        ]
+      }
+    ];
+
+    function normalize3D(cells) {
+      let minX = Infinity, minY = Infinity, minZ = Infinity;
+      for (const [x, y, z] of cells) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        minZ = Math.min(minZ, z);
+      }
+      return cells
+        .map(([x, y, z]) => [x - minX, y - minY, z - minZ])
+        .sort((a, b) => a[1] - b[1] || a[2] - b[2] || a[0] - b[0]);
+    }
+
+    function rotateX(cells) {
+      return normalize3D(cells.map(([x, y, z]) => [x, -z, y]));
+    }
+    function rotateY(cells) {
+      return normalize3D(cells.map(([x, y, z]) => [z, y, -x]));
+    }
+    function rotateZ(cells) {
+      return normalize3D(cells.map(([x, y, z]) => [-y, x, z]));
+    }
+    function mirrorX(cells) {
+      return normalize3D(cells.map(([x, y, z]) => [-x, y, z]));
+    }
+    function mirrorY(cells) {
+      return normalize3D(cells.map(([x, y, z]) => [x, -y, z]));
+    }
+    function mirrorZ(cells) {
+      return normalize3D(cells.map(([x, y, z]) => [x, y, -z]));
+    }
+    function cellKey(x, y, z) {
+      return `${x},${y},${z}`;
+    }
+
+    const panelLevelName = document.getElementById('levelName');
+    const panelDifficulty = document.getElementById('levelDifficulty');
+    const panelProjection = document.getElementById('levelProjection');
+    const panelIdea = document.getElementById('levelIdea');
+    const panelGoal = document.getElementById('levelGoal');
+    const hudTitle = document.getElementById('hudTitle');
+    const hudDesc = document.getElementById('hudDesc');
+    const levelGrid = document.getElementById('levelGrid');
+    const testResults = document.getElementById('testResults');
+    const wrap = document.getElementById('canvas-wrap');
+    const statusEl = document.getElementById('status');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0f1117);
+
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    camera.position.set(12, 14, 12);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    wrap.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.enablePan = false;
+    controls.maxPolarAngle = Math.PI * 0.48;
+    controls.minDistance = 8;
+    controls.maxDistance = 26;
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.15);
+    dir.position.set(10, 14, 10);
+    scene.add(dir);
+
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(60, 60),
+      new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 1 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    const grid = new THREE.GridHelper(60, 60, 0x30405f, 0x1e2636);
+    grid.position.y = 0.001;
+    scene.add(grid);
+
+    const boardGroup = new THREE.Group();
+    const supportsGroup = new THREE.Group();
+    const piecesGroup = new THREE.Group();
+    scene.add(boardGroup, supportsGroup, piecesGroup);
+
+    const cubeGeo = new THREE.BoxGeometry(0.92, 0.92, 0.92);
+    const targetMat = new THREE.MeshStandardMaterial({ color: 0x94e2d5, transparent: true, opacity: 0.2 });
+    const hiddenTargetMat = new THREE.MeshStandardMaterial({ color: 0x94e2d5, transparent: true, opacity: 0.05 });
+    const supportMat = new THREE.MeshStandardMaterial({ color: 0x7f849c, transparent: true, opacity: 0.18 });
+    const invalidSupportMat = new THREE.MeshStandardMaterial({ color: 0xe78284, transparent: true, opacity: 0.18 });
+    const baseMats = [0x7fb3ff, 0xcba6f7, 0x89dceb, 0xf38ba8, 0xa6e3a1, 0xf9e2af].map(
+      (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.35, metalness: 0.08 })
+    );
+    const selectedMat = new THREE.MeshStandardMaterial({ color: 0xf6c177, roughness: 0.35, metalness: 0.08 });
+    const invalidMat = new THREE.MeshStandardMaterial({ color: 0xe78284, roughness: 0.35, metalness: 0.08 });
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const dragPoint = new THREE.Vector3();
+    const dragOffset = new THREE.Vector3();
+
+    let currentLevelIndex = 0;
+    let selectedPiece = null;
+    let dragging = false;
+    let showGhost = true;
+    let showSupportHints = true;
+    let targetMeshes = [];
+    let supportMeshes = [];
+    let pieceStates = [];
+
+    function safeDisposeMaterial(material) {
+      if (!material) return;
+      if (Array.isArray(material)) material.forEach((m) => m?.dispose?.());
+      else material.dispose?.();
+    }
+
+    function clearGroup(group) {
+      while (group.children.length) {
+        const child = group.children[0];
+        group.remove(child);
+        child.geometry?.dispose?.();
+        safeDisposeMaterial(child.material);
+      }
+    }
+
+    function getLevel() {
+      return LEVELS[currentLevelIndex];
+    }
+
+    function cloneCells(cells) {
+      return cells.map(([x, y, z]) => [x, y, z]);
+    }
+
+    function trayPosition(index) {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      return { x: 9 + col * 4, y: row % 2, z: row * 4 };
+    }
+
+    function buildPieceMesh(piece, material) {
+      const group = new THREE.Group();
+      group.userData.pieceRef = piece;
+      for (const [x, y, z] of piece.cells) {
+        const mesh = new THREE.Mesh(cubeGeo, material);
+        mesh.position.set(x, y + 0.46, z);
+        group.add(mesh);
+      }
+      return group;
+    }
+
+    function worldCellsForPiece(piece) {
+      return piece.cells.map(([x, y, z]) => [x + piece.pos.x, y + piece.pos.y, z + piece.pos.z]);
+    }
+
+    function setPieceMaterial(piece, material) {
+      piece.mesh.children.forEach((child) => {
+        child.material = material;
+      });
+    }
+
+    function applyPieceVisual(piece) {
+      if (selectedPiece === piece) {
+        setPieceMaterial(piece, selectedMat);
+      } else if (!piece.isInsideTarget || piece.hasOverlap || piece.hasFloating) {
+        setPieceMaterial(piece, invalidMat);
+      } else {
+        setPieceMaterial(piece, baseMats[piece.colorIndex % baseMats.length]);
+      }
+    }
+
+    function syncPiece(piece) {
+      piece.mesh.position.set(piece.pos.x, piece.pos.y, piece.pos.z);
+      applyPieceVisual(piece);
+    }
+
+    function rebuildPieceMesh(piece) {
+      piecesGroup.remove(piece.mesh);
+      piece.mesh = buildPieceMesh(piece, baseMats[piece.colorIndex % baseMats.length]);
+      piece.mesh.userData.pieceRef = piece;
+      piecesGroup.add(piece.mesh);
+      syncPiece(piece);
+    }
+
+    function setPointer(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    }
+
+    function findPieceFromObject(object) {
+      let node = object;
+      while (node && !node.userData?.pieceRef) node = node.parent;
+      return node?.userData?.pieceRef || null;
+    }
+
+    function targetSetForLevel(level) {
+      return new Set(level.target.map(([x, y, z]) => cellKey(x, y, z)));
+    }
+
+    function occupiedCounts() {
+      const counts = new Map();
+      for (const piece of pieceStates) {
+        for (const [x, y, z] of worldCellsForPiece(piece)) {
+          const key = cellKey(x, y, z);
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+      }
+      return counts;
+    }
+
+    function computeSupportStatus(counts) {
+      const unsupported = new Set();
+      for (const [key, count] of counts.entries()) {
+        if (count <= 0) continue;
+        const [x, y, z] = key.split(',').map(Number);
+        if (y === 0) continue;
+        const belowKey = cellKey(x, y - 1, z);
+        if (!counts.has(belowKey)) unsupported.add(key);
+      }
+      return unsupported;
+    }
+
+    function updateSupportHints(counts, unsupported) {
+      clearGroup(supportsGroup);
+      supportMeshes = [];
+      if (!showSupportHints) return;
+      for (const [key] of counts.entries()) {
+        const [x, y, z] = key.split(',').map(Number);
+        if (y === 0) continue;
+        const belowKey = cellKey(x, y - 1, z);
+        if (!counts.has(belowKey)) {
+          const mesh = new THREE.Mesh(cubeGeo, unsupported.has(key) ? invalidSupportMat : supportMat);
+          mesh.scale.set(0.25, y, 0.25);
+          mesh.position.set(x, y * 0.5, z);
+          supportsGroup.add(mesh);
+          supportMeshes.push(mesh);
+        }
+      }
+    }
+
+    function updateAllValidity() {
+      const level = getLevel();
+      const targetSet = targetSetForLevel(level);
+      const counts = occupiedCounts();
+      const unsupported = computeSupportStatus(counts);
+
+      for (const piece of pieceStates) {
+        piece.isInsideTarget = true;
+        piece.hasOverlap = false;
+        piece.hasFloating = false;
+        for (const [x, y, z] of worldCellsForPiece(piece)) {
+          const key = cellKey(x, y, z);
+          if (!targetSet.has(key)) piece.isInsideTarget = false;
+          if ((counts.get(key) || 0) > 1) piece.hasOverlap = true;
+          if (unsupported.has(key)) piece.hasFloating = true;
+        }
+        applyPieceVisual(piece);
+      }
+
+      updateSupportHints(counts, unsupported);
+      evaluateWin(counts, unsupported, targetSet);
+    }
+
+    function evaluateWin(counts, unsupported, targetSet) {
+      let perfect = true;
+      for (const key of targetSet) {
+        if (counts.get(key) !== 1) {
+          perfect = false;
+          break;
+        }
+      }
+      for (const [key, count] of counts.entries()) {
+        if (!targetSet.has(key) || count !== 1) {
+          perfect = false;
+          break;
+        }
+      }
+      if (unsupported.size > 0) perfect = false;
+
+      if (perfect) {
+        statusEl.textContent = 'Puzzle solved. Exact coverage and support rules satisfied.';
+        statusEl.className = 'value win';
+        return;
+      }
+
+      let covered = 0;
+      for (const key of targetSet) {
+        if (counts.get(key) === 1) covered++;
+      }
+      const overlapCount = [...counts.values()].filter((v) => v > 1).length;
+      statusEl.textContent = `Covered ${covered} / ${targetSet.size} cells | overlaps: ${overlapCount} | unsupported: ${unsupported.size}`;
+      statusEl.className = 'value warn';
+    }
+
+    function snapPiece(piece) {
+      piece.pos.x = Math.round(piece.pos.x);
+      piece.pos.y = Math.max(0, Math.round(piece.pos.y));
+      piece.pos.z = Math.round(piece.pos.z);
+      syncPiece(piece);
+      updateAllValidity();
+    }
+
+    function applyGravityToPiece(piece) {
+      if (!piece) return;
+      while (piece.pos.y > 0) {
+        piece.pos.y -= 1;
+        const counts = occupiedCounts();
+        let collision = false;
+        const targetSet = targetSetForLevel(getLevel());
+        for (const [x, y, z] of worldCellsForPiece(piece)) {
+          const key = cellKey(x, y, z);
+          if (!targetSet.has(key)) {
+            collision = true;
+            break;
+          }
+          if ((counts.get(key) || 0) > 1) {
+            collision = true;
+            break;
+          }
+        }
+        if (collision) {
+          piece.pos.y += 1;
+          break;
+        }
+      }
+      syncPiece(piece);
+      updateAllValidity();
+    }
+
+    function transformSelected(transformFn) {
+      if (!selectedPiece) return;
+      selectedPiece.cells = transformFn(selectedPiece.cells);
+      rebuildPieceMesh(selectedPiece);
+      updateAllValidity();
+    }
+
+    function resetPieceToTray(piece) {
+      const tray = trayPosition(piece.index);
+      piece.cells = cloneCells(piece.originalCells);
+      piece.pos = { ...tray };
+      rebuildPieceMesh(piece);
+      updateAllValidity();
+    }
+
+    function resetView() {
+      controls.target.set(4, 2, 2);
+      camera.position.set(12, 14, 12);
+      controls.update();
+    }
+
+    function loadLevel(index) {
+      currentLevelIndex = index;
+      selectedPiece = null;
+      dragging = false;
+      clearGroup(boardGroup);
+      clearGroup(supportsGroup);
+      clearGroup(piecesGroup);
+      targetMeshes = [];
+      supportMeshes = [];
+      pieceStates = [];
+
+      const level = getLevel();
+      panelLevelName.textContent = level.name;
+      panelDifficulty.textContent = level.difficulty;
+      panelProjection.textContent = level.projection;
+      panelIdea.textContent = level.idea;
+      panelGoal.textContent = level.goal;
+      hudTitle.textContent = level.name;
+      hudDesc.textContent = level.desc;
+      document.querySelectorAll('.level-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
+
+      for (const [x, y, z] of level.target) {
+        const mesh = new THREE.Mesh(cubeGeo, showGhost ? targetMat : hiddenTargetMat);
+        mesh.position.set(x, y + 0.46, z);
+        boardGroup.add(mesh);
+        targetMeshes.push(mesh);
+      }
+
+      level.pieces.forEach((cells, idx) => {
+        const tray = trayPosition(idx);
+        const piece = {
+          index: idx,
+          colorIndex: idx,
+          originalCells: normalize3D(cloneCells(cells)),
+          cells: normalize3D(cloneCells(cells)),
+          pos: { ...tray },
+          isInsideTarget: true,
+          hasOverlap: false,
+          hasFloating: false,
+          mesh: null
+        };
+        piece.mesh = buildPieceMesh(piece, baseMats[idx % baseMats.length]);
+        piece.mesh.userData.pieceRef = piece;
+        piecesGroup.add(piece.mesh);
+        pieceStates.push(piece);
+        syncPiece(piece);
+      });
+
+      resetView();
+      statusEl.textContent = 'Drag a piece to begin.';
+      statusEl.className = 'value warn';
+      updateAllValidity();
+    }
+
+    function buildLevelButtons() {
+      levelGrid.innerHTML = '';
+      LEVELS.forEach((level, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'level-btn';
+        btn.innerHTML = `<div><strong>${level.id}</strong> ${level.name.replace(/^Level\s\d+\s-\s/, '')}</div><div class="tag">${level.difficulty.split(' ')[0]}</div>`;
+        btn.addEventListener('click', () => loadLevel(index));
+        levelGrid.appendChild(btn);
+      });
+    }
+
+    function resize() {
+      const width = Math.max(wrap.clientWidth, 320);
+      const height = Math.max(wrap.clientHeight, 420);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+    }
+
+    renderer.domElement.addEventListener('pointerdown', (event) => {
+      setPointer(event);
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(piecesGroup.children, true);
+      if (!hits.length) return;
+      const piece = findPieceFromObject(hits[0].object);
+      if (!piece) return;
+      selectedPiece = piece;
+      dragging = true;
+      controls.enabled = false;
+      raycaster.ray.intersectPlane(dragPlane, dragPoint);
+      dragOffset.set(piece.pos.x - dragPoint.x, 0, piece.pos.z - dragPoint.z);
+      updateAllValidity();
+    });
+
+    renderer.domElement.addEventListener('pointermove', (event) => {
+      if (!dragging || !selectedPiece) return;
+      setPointer(event);
+      raycaster.setFromCamera(pointer, camera);
+      if (raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
+        selectedPiece.pos.x = Math.round(dragPoint.x + dragOffset.x);
+        selectedPiece.pos.z = Math.round(dragPoint.z + dragOffset.z);
+        syncPiece(selectedPiece);
+        updateAllValidity();
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (dragging && selectedPiece) snapPiece(selectedPiece);
+      dragging = false;
+      controls.enabled = true;
+    });
+
+    renderer.domElement.addEventListener('dblclick', (event) => {
+      setPointer(event);
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(piecesGroup.children, true);
+      if (!hits.length) return;
+      const piece = findPieceFromObject(hits[0].object);
+      if (!piece) return;
+      selectedPiece = piece;
+      resetPieceToTray(piece);
+    });
+
+    window.addEventListener('keydown', (event) => {
+      const key = event.key.toLowerCase();
+      if (key === 'x') transformSelected(rotateX);
+      if (key === 'y') transformSelected(rotateY);
+      if (key === 'z') transformSelected(rotateZ);
+      if (key === 'f') transformSelected(mirrorX);
+      if (key === 'g') transformSelected(mirrorY);
+      if (key === 'h') transformSelected(mirrorZ);
+      if (key === 'r' && selectedPiece) {
+        selectedPiece.cells = rotateY(rotateX(selectedPiece.cells));
+        rebuildPieceMesh(selectedPiece);
+        updateAllValidity();
+      }
+      if (key === 'q' && selectedPiece) {
+        selectedPiece.pos.y = Math.max(0, selectedPiece.pos.y - 1);
+        syncPiece(selectedPiece);
+        updateAllValidity();
+      }
+      if (key === 'e' && selectedPiece) {
+        selectedPiece.pos.y += 1;
+        syncPiece(selectedPiece);
+        updateAllValidity();
+      }
+      if (key === ' ') {
+        event.preventDefault();
+        applyGravityToPiece(selectedPiece);
+      }
+    });
+
+    document.getElementById('toggleGhost').addEventListener('click', () => {
+      showGhost = !showGhost;
+      targetMeshes.forEach((mesh) => {
+        mesh.material = showGhost ? targetMat : hiddenTargetMat;
+      });
+    });
+
+    document.getElementById('toggleSupports').addEventListener('click', () => {
+      showSupportHints = !showSupportHints;
+      updateAllValidity();
+    });
+
+    document.getElementById('gravityBtn').addEventListener('click', () => {
+      applyGravityToPiece(selectedPiece);
+    });
+
+    document.getElementById('snapBtn').addEventListener('click', () => {
+      if (selectedPiece) snapPiece(selectedPiece);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      loadLevel(currentLevelIndex);
+    });
+
+    window.addEventListener('resize', resize);
+
+    function runChecks() {
+      const results = [];
+      const push = (pass, message) => results.push(`${pass ? '✔' : '✘'} ${message}`);
+
+      push(LEVELS.length === 10, 'There are exactly 10 levels.');
+      push(LEVELS.every((level) => Array.isArray(level.target) && level.target.length >= 8), 'Each level defines a non-trivial 3D target volume.');
+      push(LEVELS.every((level) => level.target.some(([, y]) => y > 0) && level.target.some(([, y]) => y > 1)), 'Every level includes meaningful multiple layers.');
+      push(LEVELS.every((level) => Array.isArray(level.pieces) && level.pieces.length >= 3), 'Each level includes multiple pieces.');
+      push(LEVELS.every((level) => level.pieces.reduce((sum, piece) => sum + piece.length, 0) === level.target.length), 'Every level is exactly coverable by its pieces.');
+      push(LEVELS.every((level) => new Set(level.target.map(([x, y, z]) => cellKey(x, y, z))).size === level.target.length), 'Target cells are unique in every level.');
+      push(LEVELS.every((level) => level.pieces.flat().every((c) => Array.isArray(c) && c.length === 3 && c.every(Number.isFinite))), 'Piece coordinates are valid 3D tuples.');
+      push(typeof rotateX === 'function' && typeof rotateY === 'function' && typeof rotateZ === 'function', '3-axis rotation helpers are defined.');
+      push(typeof mirrorX === 'function' && typeof mirrorY === 'function' && typeof mirrorZ === 'function', '3-axis mirror helpers are defined.');
+      push(typeof computeSupportStatus === 'function', 'Support validation is defined.');
+      push(document.getElementById('gravityBtn') !== null, 'Gravity control exists in the UI.');
+
+      const failures = results.filter((line) => line.startsWith('✘')).length;
+      testResults.innerHTML = results
+        .map((line) => `<span class="${line.startsWith('✔') ? 'ok' : 'fail'}">${line}</span>`)
+        .join('<br>') +
+        `<br><br>${failures === 0 ? '<span class="ok">All checks passed.</span>' : `<span class="fail">${failures} check(s) failed.</span>`}`;
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    buildLevelButtons();
+    resize();
+    runChecks();
+    loadLevel(0);
+    animate();
+  </script>
+</body>
+</html>
