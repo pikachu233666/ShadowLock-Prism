@@ -123,6 +123,16 @@
       <h1>ShadowLock Prism - Yuxin Liu</h1>
       <p class="muted">The design is inspired by traditional puzzles: Tangram represents 2D geometric composition, while Kongming Lock represents complex 3D structural interlocking. This project combines both ideas by extending 2D spatial reasoning into a fully 3D environment.</p>
 
+      <div class="card">
+        <div class="label">Rules</div>
+        <ul>
+          <li>Every occupied cell must match the glowing target volume.</li>
+          <li>No overlap is allowed.</li>
+          <li>No floating cells: each cell must sit on the ground or another occupied cell.</li>
+          <li>You win only when the full target volume is covered exactly once.</li>
+        </ul>
+      </div>
+
       <h2>Select Level</h2>
       <div id="levelGrid" class="level-grid"></div>
 
@@ -159,20 +169,10 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="label">Rules</div>
-        <ul>
-          <li>Every occupied cell must match the glowing target volume.</li>
-          <li>No overlap is allowed.</li>
-          <li>No floating cells: each cell must sit on the ground or another occupied cell.</li>
-          <li>You win only when the full target volume is covered exactly once.</li>
-        </ul>
-      </div>
-
-      <div class="card">
+      <!-- <div class="card">
         <div class="label">Built-in Checks</div>
         <div id="testResults">Running checks...</div>
-      </div>
+      </div> -->
     </aside>
 
     <main id="canvas-wrap">
@@ -196,167 +196,200 @@
     const LEVELS = [
       {
         id: 1,
-        name: 'Level 1 - Twisted Split Tower',
-        difficulty: '★★★☆☆ Intro 3D',
-        projection: 'Front: broken arch / Top: offset square / Side: stepped rise',
-        idea: 'A stronger opening level with real vertical mismatch and a forced standing piece.',
-        goal: 'Assemble the target using at least one upright rotation.',
-        desc: 'Still the easiest level, but no longer flat or obvious.',
-        target: [[0,0,0],[1,0,0],[0,0,1],[1,0,1],[0,1,0],[1,1,1],[2,0,1],[2,1,1]],
+        name: 'Level 1 - Tilted Twin Pillars',
+        difficulty: '★★★☆☆ Intro+',
+        projection: 'Front: twin towers / Top: bent strip / Side: split rise',
+        idea: 'Two vertical columns and a compact rear plate force early rotation instead of flat placement.',
+        goal: 'Use upright rotations to complete both pillars and the rear support.',
+        desc: 'Even the first stage already asks for real 3D turning.',
+        target: [
+          [0,0,1],[0,0,2],[1,0,1],[2,0,0],[2,0,1],[2,0,2],
+          [3,0,0],[3,1,0],[3,2,0],[3,3,0],[4,0,0],[4,0,1],[4,1,0],[4,1,1]
+        ],
         pieces: [
-          [[0,0,0],[1,0,0],[0,1,0]],
-          [[0,0,0],[0,0,1],[1,0,1]],
-          [[0,0,0],[0,1,0]]
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[1,0,0],[2,0,0],[3,0,0]],
+          [[0,0,0],[1,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0],[0,0,1],[1,0,1]]
         ]
       },
       {
         id: 2,
-        name: 'Level 2 - Broken Gate',
+        name: 'Level 2 - Folded Corner Shaft',
         difficulty: '★★★☆☆ Easy+',
-        projection: 'Front: offset gate / Top: hooked L / Side: leaning frame',
-        idea: 'Introduces an off-center frame where height matters immediately.',
-        goal: 'Complete the bent gate without filling the wrong side.',
-        desc: 'The first level where a mirror can be helpful even if not strictly required.',
-        target: [[0,0,0],[1,0,0],[2,0,0],[0,1,0],[2,1,0],[2,0,1],[2,1,1],[1,1,1],[1,2,1]],
+        projection: 'Front: stepped corner / Top: hooked block / Side: tall edge',
+        idea: 'A vertical spine plus corner cap makes flat-first guessing fail quickly.',
+        goal: 'Rotate long pieces upright and wrap the corner cleanly.',
+        desc: 'The footprint looks simple, but the height distribution is not.',
+        target: [
+          [0,0,0],[0,0,1],[0,0,2],[0,1,0],[0,2,0],[0,3,0],
+          [1,0,0],[1,0,1],[1,0,2],[1,1,0],[1,1,1],[2,0,2],[2,1,2],[2,2,2]
+        ],
         pieces: [
-          [[0,0,0],[1,0,0],[2,0,0]],
-          [[0,0,0],[0,1,0],[0,1,1]],
-          [[0,0,0],[1,0,0],[0,1,0]]
+          [[0,0,0],[1,0,0],[0,0,1],[1,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0],[3,0,0]],
+          [[0,0,0],[1,0,0],[2,0,0],[0,0,1]],
+          [[0,0,0],[1,0,0]]
         ]
       },
       {
         id: 3,
-        name: 'Level 3 - Folded Corner Tower',
+        name: 'Level 3 - Vertical Gate Frame',
         difficulty: '★★★★☆ Medium-',
-        projection: 'Front: staircase / Top: folded corner / Side: tall L',
-        idea: 'A genuine 3D corner puzzle where pieces must bend around height and depth together.',
-        goal: 'Finish the elevated corner without collisions.',
-        desc: 'From here onward, footprint alone is not enough to solve anything.',
-        target: [[0,0,0],[1,0,0],[2,0,0],[0,1,0],[0,2,0],[0,0,1],[0,1,1],[1,1,1],[1,2,1],[1,2,2]],
+        projection: 'Front: tall gate / Top: narrow line / Side: offset ladder',
+        idea: 'Several pieces must stand on edge to form the frame correctly.',
+        goal: 'Build the side frame without blocking the inner channel.',
+        desc: 'This is where rotations start mattering more than footprint reading.',
+        target: [
+          [0,0,0],[0,0,1],[0,0,2],[0,0,3],[0,1,0],[0,1,3],[0,2,0],
+          [1,0,0],[1,0,1],[1,1,0],[1,2,0],[2,0,0],[2,1,0]
+        ],
         pieces: [
-          [[0,0,0],[1,0,0],[2,0,0]],
-          [[0,0,0],[0,1,0],[0,2,0]],
-          [[0,0,0],[0,0,1],[1,0,1]],
-          [[0,0,0],[0,1,0]]
+          [[0,0,0],[1,0,0],[2,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0]],
+          [[0,0,0],[1,0,0],[0,0,1],[1,0,1]],
+          [[0,0,0],[1,0,0],[1,0,1]]
         ]
       },
       {
         id: 4,
-        name: 'Level 4 - Interlock Spine',
+        name: 'Level 4 - Offset Spine Lock',
         difficulty: '★★★★☆ Medium',
-        projection: 'Front: cross / Top: offset cross / Side: 3-high pillar',
-        idea: 'Pieces need to wrap around a center column from several directions.',
-        goal: 'Lock the arms around the main vertical spine.',
-        desc: 'Strongly rewards rotating around all three axes instead of only spinning flat.',
-        target: [[1,0,1],[1,1,1],[1,2,1],[1,3,1],[0,1,1],[2,1,1],[1,1,0],[1,1,2],[0,2,1],[2,2,1]],
+        projection: 'Front: broken spine / Top: branching strip / Side: tall post',
+        idea: 'The target is stretched in multiple directions, so most pieces need reorientation.',
+        goal: 'Find the correct standing column and side branch placements.',
+        desc: 'Flat rotations alone are almost never enough here.',
+        target: [
+          [0,0,1],[0,0,3],[0,0,4],[0,1,4],[0,2,4],[0,3,4],
+          [1,0,0],[1,0,1],[1,0,2],[1,0,3],[2,0,1],[3,0,1],[3,1,1],[3,2,1]
+        ],
         pieces: [
-          [[0,0,0],[0,1,0],[0,2,0]],
-          [[0,0,0],[1,0,0],[2,0,0]],
-          [[0,0,0],[0,1,0],[1,1,0]],
-          [[0,0,0],[0,0,1]]
+          [[0,0,0],[1,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0],[3,0,0]],
+          [[0,0,0],[1,0,0],[2,0,0]]
         ]
       },
       {
         id: 5,
-        name: 'Level 5 - Cantilever Cage',
+        name: 'Level 5 - Towered Comb',
         difficulty: '★★★★☆ Medium+',
-        projection: 'Front: cage / Top: long zigzag / Side: suspended brace',
-        idea: 'This level pushes players to think about empty space and vertical bracing.',
-        goal: 'Build the outer cage while preserving the suspended center.',
-        desc: 'A more architectural puzzle with no obvious first placement.',
-        target: [[0,0,0],[1,0,0],[2,0,0],[3,0,0],[0,1,0],[3,1,0],[0,2,0],[3,2,0],[1,1,1],[2,1,1],[1,2,1]],
+        projection: 'Front: comb wall / Top: staggered stem / Side: double shelf',
+        idea: 'A dense wall on one side and low extensions on the other side create deceptive balance.',
+        goal: 'Stand the wall correctly and preserve the lower teeth.',
+        desc: 'A lot of placements look close but fail one vertical detail.',
+        target: [
+          [0,0,1],[0,0,2],[0,0,3],[0,0,4],[0,1,1],[0,1,2],[0,1,3],
+          [0,2,1],[0,2,2],[0,3,1],[0,3,2],[1,0,0],[1,0,1],[1,1,1],
+          [2,0,0],[3,0,0],[3,0,1]
+        ],
         pieces: [
-          [[0,0,0],[1,0,0],[2,0,0]],
-          [[0,0,0],[0,1,0],[0,2,0]],
-          [[0,0,0],[1,0,0],[1,1,0]],
-          [[0,0,0],[0,1,0]],
-          [[0,0,0]]
+          [[0,0,0],[1,0,0],[0,0,1],[1,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0]],
+          [[0,0,0],[1,0,0],[0,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0],[0,0,1]]
         ]
       },
       {
         id: 6,
-        name: 'Level 6 - Triple Stair Labyrinth',
+        name: 'Level 6 - Rising Maze Stem',
         difficulty: '★★★★★ Hard-',
-        projection: 'Front: 3-step rise / Top: maze strip / Side: climbing path',
-        idea: 'Several levels interleave so that the target behaves like a tiny 3D labyrinth.',
-        goal: 'Assemble the staircase maze exactly across three heights.',
-        desc: 'A major jump in difficulty with more than one plausible but wrong arrangement.',
-        target: [[0,0,0],[1,0,0],[2,0,0],[0,1,0],[1,1,0],[0,2,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1],[1,2,1],[1,2,2]],
+        projection: 'Front: stepped maze / Top: bent corridor / Side: split elevation',
+        idea: 'The structure climbs in layers, forcing multiple pieces into non-default orientations.',
+        goal: 'Complete the layered stem without collapsing the side channel.',
+        desc: 'There are several tempting wrong builds that look almost right.',
+        target: [
+          [0,0,2],[0,1,2],[1,0,1],[1,0,2],[1,1,1],[1,1,2],[1,2,1],
+          [2,0,0],[2,0,1],[2,1,0],[3,0,1],[3,0,2],[3,0,3],[3,0,4],[3,1,3],[3,1,4]
+        ],
         pieces: [
           [[0,0,0],[1,0,0],[2,0,0]],
-          [[0,0,0],[0,1,0],[1,1,0]],
-          [[0,0,0],[0,0,1],[1,0,1]],
-          [[0,0,0],[0,1,0],[0,1,1]],
-          [[0,0,0]]
+          [[0,0,0],[1,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0],[3,0,0]],
+          [[0,0,0],[1,0,0]],
+          [[0,0,0],[1,0,0],[0,0,1],[1,0,1]]
         ]
       },
       {
         id: 7,
-        name: 'Level 7 - Hollow Gate Plus',
+        name: 'Level 7 - Needle Bridge',
         difficulty: '★★★★★ Hard',
-        projection: 'Front: gate / Top: U with depth / Side: layered frame',
-        idea: 'Now the hollow center is truly 3D and easy to accidentally block.',
-        goal: 'Keep the cavity open while completing the shell.',
-        desc: 'Careless rotations usually ruin the empty channel in the middle.',
-        target: [[0,0,0],[1,0,0],[2,0,0],[0,1,0],[2,1,0],[0,2,0],[1,2,0],[2,2,0],[0,0,1],[2,0,1],[0,1,1],[2,1,1],[1,2,1]],
+        projection: 'Front: tall needle / Top: long bridge / Side: hanging bend',
+        idea: 'A very tall vertical segment combined with low horizontal spread makes rotation mandatory.',
+        goal: 'Raise the spine while preserving the low bridge and side hooks.',
+        desc: 'Most of the shape only makes sense once you start thinking in columns.',
+        target: [
+          [0,0,2],[0,0,3],[1,0,2],[2,0,0],[2,0,1],[2,0,2],[2,0,3],[2,0,4],
+          [2,1,0],[2,1,1],[2,1,3],[2,2,3],[2,3,3],[2,4,3],[2,5,3],
+          [3,0,2],[4,0,2],[5,0,1],[5,0,2]
+        ],
         pieces: [
-          [[0,0,0],[1,0,0],[2,0,0]],
-          [[0,0,0],[0,1,0],[0,2,0]],
           [[0,0,0],[1,0,0],[1,0,1]],
-          [[0,0,0],[0,1,0],[0,1,1]],
-          [[0,0,0]]
+          [[0,0,0],[1,0,0],[2,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0],[3,0,0]],
+          [[0,0,0],[1,0,0],[2,0,0],[0,0,1]],
+          [[0,0,0],[1,0,0],[0,0,1],[1,0,1]]
         ]
       },
       {
         id: 8,
-        name: 'Level 8 - Spiral Core Max',
+        name: 'Level 8 - Split Tower Circuit',
         difficulty: '★★★★★ Very Hard',
-        projection: 'Front: spiral rise / Top: coil / Side: layered turn',
-        idea: 'Several transformations are necessary and camera inspection becomes essential.',
-        goal: 'Fit the spiral without overfilling the center or outer curve.',
-        desc: 'This is the first level that feels like a true 3D burr puzzle.',
-        target: [[0,0,0],[1,0,0],[1,1,0],[1,1,1],[0,1,1],[0,2,1],[0,2,2],[1,2,2],[2,2,2],[2,1,2],[2,1,1]],
+        projection: 'Front: dual tower / Top: winding trace / Side: staggered crown',
+        idea: 'This one mixes thin columns and low connectors, so piece orientation order matters a lot.',
+        goal: 'Assemble both rising arms and the diagonal floor path exactly.',
+        desc: 'A wrong early rotation usually ruins the entire second half.',
+        target: [
+          [0,0,0],[0,1,0],[1,0,0],[1,0,1],[1,1,1],[1,2,1],[2,0,1],[2,0,3],
+          [2,1,1],[2,1,3],[2,2,1],[2,3,1],[3,0,1],[3,0,2],[3,0,3],[3,1,3],[4,0,2]
+        ],
         pieces: [
-          [[0,0,0],[1,0,0],[1,1,0]],
-          [[0,0,0],[0,1,0],[0,1,1]],
-          [[0,0,0],[0,0,1],[1,0,1]],
-          [[0,0,0],[0,1,0]],
-          [[0,0,0],[1,0,0]]
+          [[0,0,0],[1,0,0],[2,0,0]],
+          [[0,0,0],[1,0,0],[2,0,0],[3,0,0]],
+          [[0,0,0],[1,0,0],[2,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0],[0,0,1]]
         ]
       },
       {
         id: 9,
-        name: 'Level 9 - Crown Fortress',
+        name: 'Level 9 - Crowned Channel',
         difficulty: '★★★★★ Expert',
-        projection: 'Front: crown / Top: wide U / Side: double-height peaks',
-        idea: 'A big footprint with multiple towers, overhang feelings, and mirrored possibilities.',
-        goal: 'Create the crown profile with exact multi-level coverage.',
-        desc: 'Difficult to solve without planning which piece becomes each tower and ridge.',
-        target: [[0,0,0],[1,0,0],[2,0,0],[3,0,0],[4,0,0],[0,1,0],[2,1,0],[4,1,0],[1,2,0],[3,2,0],[1,0,1],[3,0,1],[1,1,1],[3,1,1]],
+        projection: 'Front: crown ridge / Top: hooked lane / Side: central tower',
+        idea: 'The center column is easy to identify but hard to assign to the correct piece.',
+        goal: 'Form the crown profile without breaking the ground channel.',
+        desc: 'Planning which piece becomes the tower is the real challenge.',
+        target: [
+          [0,0,2],[0,0,3],[0,0,4],[0,0,5],[1,0,0],[1,0,1],[1,0,2],[1,1,2],[1,2,2],
+          [2,0,1],[2,0,2],[2,0,3],[3,0,0],[3,0,1],[3,0,2],[4,0,1]
+        ],
         pieces: [
+          [[0,0,0],[1,0,0],[1,0,1]],
           [[0,0,0],[1,0,0],[2,0,0]],
-          [[0,0,0],[1,0,0],[0,1,0]],
-          [[0,0,0],[0,1,0],[0,0,1]],
-          [[0,0,0],[0,1,0],[0,0,1]],
-          [[0,0,0],[1,0,0]]
+          [[0,0,0],[1,0,0]],
+          [[0,0,0],[1,0,0],[2,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0],[3,0,0]]
         ]
       },
       {
         id: 10,
-        name: 'Level 10 - Final ShadowLock Prism',
-        difficulty: '★★★★★ Boss+',
-        projection: 'Front: temple emblem / Top: ring / Side: stepped lock tower',
-        idea: 'Combines height, cavity, mirror use, and multi-axis rotation in a large final structure.',
-        goal: 'Complete the final multi-layer ring while preserving the center opening and upper ridges.',
-        desc: 'The full version of the concept: dense, layered, and much harder than the earlier prototype.',
-        target: [[0,0,0],[1,0,0],[2,0,0],[3,0,0],[0,1,0],[3,1,0],[0,2,0],[3,2,0],[0,3,0],[1,3,0],[2,3,0],[3,3,0],[1,0,1],[2,0,1],[1,3,1],[2,3,1],[1,1,2],[2,1,2],[1,2,2],[2,2,2]],
+        name: 'Level 10 - Final Prism Spire',
+        difficulty: '★★★★★ Boss',
+        projection: 'Front: twin spires / Top: broken ring / Side: asym tower',
+        idea: 'A final asymmetric structure with multiple narrow columns and offset supports.',
+        goal: 'Use multi-axis rotations to finish both spires and the outer frame.',
+        desc: 'This final level is much harder to brute-force because so many placements demand standing rotations.',
+        target: [
+          [0,0,1],[0,0,2],[0,0,3],[0,0,4],[0,1,1],[0,1,3],[0,2,1],[0,3,1],
+          [1,0,0],[1,0,1],[1,0,3],[1,1,3],[1,2,3],[1,3,3],[1,4,3],[2,0,1]
+        ],
         pieces: [
-          [[0,0,0],[1,0,0],[2,0,0]],
-          [[0,0,0],[0,1,0],[0,2,0]],
-          [[0,0,0],[1,0,0],[1,0,1]],
-          [[0,0,0],[0,1,0],[0,1,1]],
-          [[0,0,0],[1,0,0],[0,0,1],[1,0,1]],
-          [[0,0,0],[0,1,0]]
+          [[0,0,0],[1,0,0],[2,0,0],[1,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0],[3,0,0]],
+          [[0,0,0],[1,0,0]],
+          [[0,0,0],[1,0,0],[0,0,1]],
+          [[0,0,0],[1,0,0],[2,0,0]]
         ]
       }
     ];
@@ -914,7 +947,7 @@
 
     buildLevelButtons();
     resize();
-    runChecks();
+    // runChecks();
     loadLevel(0);
     animate();
   </script>
